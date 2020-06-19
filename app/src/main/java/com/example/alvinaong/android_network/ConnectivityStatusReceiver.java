@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.util.Log;
@@ -25,21 +26,33 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         DISCONNECTED
     }
 
+    enum Type {
+        None,
+        Wifi,
+        Mobile
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "onReceive");
         if (!isConnected(context)) {
             Toast.makeText(context, "Disconnected", Toast.LENGTH_LONG).show();
-            createNotification(context, Status.DISCONNECTED);
+            createNotification(context, Status.DISCONNECTED, Type.None);
         } else {
-            Toast.makeText(context, "Connected", Toast.LENGTH_LONG).show();
-            createNotification(context, Status.CONNECTED);
+            if (isMobileConnection(context)) {
+                Toast.makeText(context, "Connected to mobile", Toast.LENGTH_LONG).show();
+                createNotification(context, Status.CONNECTED, Type.Mobile);
+            }
+            else if(isWifiConnection(context)){
+                Toast.makeText(context, "Connected to wifi", Toast.LENGTH_LONG).show();
+                createNotification(context, Status.CONNECTED, Type.Wifi);
+            }
         }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private static void createNotification(Context context, Status status) {
+    private static void createNotification(Context context, Status status, Type type) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
         notificationChannel.setDescription("network change notification");
@@ -49,7 +62,12 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle("Your network status");
         if (status.equals(Status.CONNECTED)) {
-            builder.setContentText("Connected");
+            if (type.equals(Type.Mobile)){
+                builder.setContentText("Connected to Mobile");
+            }
+            else if (type.equals(Type.Wifi)){
+                builder.setContentText("Connected to Wifi");
+            }
         } else {
             builder.setContentText("Disconnected");
         }
@@ -61,4 +79,30 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
     }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static boolean isMobileConnection(Context context){
+        boolean isMobileConn = false;
+        ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        for (Network network : connMgr.getAllNetworks()) {
+            if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
+                isMobileConn |= networkInfo.isConnected();
+            }
+        }
+        return isMobileConn;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    public static boolean isWifiConnection(Context context){
+        boolean isWifiConn = false;
+        ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        for (Network network : connMgr.getAllNetworks())
+            if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                isWifiConn |= networkInfo.isConnected();
+            }
+        return isWifiConn;
+    }
+
 }
