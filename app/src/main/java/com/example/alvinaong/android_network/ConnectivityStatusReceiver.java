@@ -15,6 +15,10 @@ import android.widget.Toast;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class ConnectivityStatusReceiver extends BroadcastReceiver {
 
     static final String TAG = "ConnectivityStatus";
@@ -32,27 +36,43 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         Mobile
     }
 
+    enum Ping {
+        Successful,
+        Unsuccessful
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "onReceive");
         if (!isConnected(context)) {
             Toast.makeText(context, "Disconnected", Toast.LENGTH_LONG).show();
-            createNotification(context, Status.DISCONNECTED, Type.None);
+            createNotification(context, Status.DISCONNECTED, Type.None, Ping.Unsuccessful);
         } else {
-            if (isMobileConnection(context)) {
-                Toast.makeText(context, "Connected to mobile", Toast.LENGTH_LONG).show();
-                createNotification(context, Status.CONNECTED, Type.Mobile);
-            }
-            else if(isWifiConnection(context)){
-                Toast.makeText(context, "Connected to wifi", Toast.LENGTH_LONG).show();
-                createNotification(context, Status.CONNECTED, Type.Wifi);
+            if(isConnectedToThisServer()){
+                if (isMobileConnection(context)) {
+                    Toast.makeText(context, "Connected to mobile and ping to google successful", Toast.LENGTH_LONG).show();
+                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Successful);
+                }
+                else if(isWifiConnection(context)){
+                    Toast.makeText(context, "Connected to wifi and ping to google successful", Toast.LENGTH_LONG).show();
+                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Successful);
+                }
+            } else {
+                if (isMobileConnection(context)) {
+                    Toast.makeText(context, "Connected to mobile but ping to google unsuccessful", Toast.LENGTH_LONG).show();
+                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Unsuccessful);
+                }
+                else if(isWifiConnection(context)){
+                    Toast.makeText(context, "Connected to wifi but ping to google unsuccessful", Toast.LENGTH_LONG).show();
+                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Unsuccessful);
+                }
             }
         }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private static void createNotification(Context context, Status status, Type type) {
+    private static void createNotification(Context context, Status status, Type type, Ping ping) {
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
         notificationChannel.setDescription("network change notification");
@@ -62,11 +82,20 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle("Your network status");
         if (status.equals(Status.CONNECTED)) {
-            if (type.equals(Type.Mobile)){
-                builder.setContentText("Connected to Mobile");
-            }
-            else if (type.equals(Type.Wifi)){
-                builder.setContentText("Connected to Wifi");
+            if(ping.equals(Ping.Successful)){
+                if (type.equals(Type.Mobile)){
+                    builder.setContentText("Connected to Mobile and ping to google successful");
+                }
+                else if (type.equals(Type.Wifi)){
+                    builder.setContentText("Connected to Wifi and ping to google successful");
+                }
+            } else {
+                if (type.equals(Type.Mobile)){
+                    builder.setContentText("Connected to Mobile but ping to google unsuccessful");
+                }
+                else if (type.equals(Type.Wifi)){
+                    builder.setContentText("Connected to Wifi and ping to google unsuccessful");
+                }
             }
         } else {
             builder.setContentText("Disconnected");
@@ -78,6 +107,35 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
+    }
+
+    public boolean isConnectedToThisServer() {
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            Process ipProcess = runtime.exec("/system/bin/ping -c 1 8.8.8.8");
+            int     exitValue = ipProcess.waitFor();
+            Log.i(TAG, "exit value " + exitValue);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    ipProcess.getInputStream()));
+            StringBuffer output = new StringBuffer();
+            String temp;
+            int count = 0;
+            String str = "";
+            while ( (temp = reader.readLine()) != null)//.read(buffer)) > 0)
+            {
+                output.append(temp);
+                count++;
+            }
+            reader.close();
+            if(count > 0)
+                str = output.toString();
+            Log.i(TAG, str);
+            return (exitValue == 0);
+        } catch (IOException e)          { e.printStackTrace(); }
+        catch (InterruptedException e) { e.printStackTrace(); }
+        catch (Exception e) {e.printStackTrace(); }
+        return false;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)

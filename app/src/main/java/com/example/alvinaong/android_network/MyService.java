@@ -53,7 +53,7 @@ public class MyService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID);
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle("Your network status");
-        builder.setContentText("Hello");
+        builder.setContentText("Analyzing connection");
         notificationManager.notify(1, builder.build());
         startForeground(1, builder.build());
 
