@@ -44,35 +44,42 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onReceive(Context context, Intent intent) {
+        String notificationMessage = "";
         Log.i(TAG, "onReceive");
         if (!isConnected(context)) {
-            Toast.makeText(context, "Disconnected", Toast.LENGTH_LONG).show();
-            createNotification(context, Status.DISCONNECTED, Type.None, Ping.Unsuccessful);
+//            Toast.makeText(context, "Disconnected", Toast.LENGTH_LONG).show();
+//            createNotification(context, Status.DISCONNECTED, Type.None, Ping.Unsuccessful);
+            notificationMessage = "Disconnected";
         } else {
             if(isConnectedToThisServer()){
                 if (isMobileConnection(context)) {
-                    Toast.makeText(context, "Connected to mobile and ping to google successful", Toast.LENGTH_LONG).show();
-                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Successful);
+//                    Toast.makeText(context, "Connected to mobile and ping to google successful", Toast.LENGTH_LONG).show();
+//                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Successful);
+                    notificationMessage = "Connected to mobile and ping to google successful";
                 }
                 else if(isWifiConnection(context)){
-                    Toast.makeText(context, "Connected to wifi and ping to google successful", Toast.LENGTH_LONG).show();
-                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Successful);
+//                    Toast.makeText(context, "Connected to wifi and ping to google successful", Toast.LENGTH_LONG).show();
+//                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Successful);
+                    notificationMessage = "Connected to wifi and ping to google successful";
                 }
             } else {
                 if (isMobileConnection(context)) {
-                    Toast.makeText(context, "Connected to mobile but ping to google unsuccessful", Toast.LENGTH_LONG).show();
-                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Unsuccessful);
+//                    Toast.makeText(context, "Connected to mobile but ping to google unsuccessful", Toast.LENGTH_LONG).show();
+//                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Unsuccessful);
+                    notificationMessage = "Connected to mobile but ping to google unsuccessful";
                 }
                 else if(isWifiConnection(context)){
-                    Toast.makeText(context, "Connected to wifi but ping to google unsuccessful", Toast.LENGTH_LONG).show();
-                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Unsuccessful);
+//                    Toast.makeText(context, "Connected to wifi but ping to google unsuccessful", Toast.LENGTH_LONG).show();
+//                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Unsuccessful);
+                    notificationMessage = "Connected to wifi but ping to google unsuccessful";
                 }
             }
         }
+        sendNotification(context, notificationMessage);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private static void createNotification(Context context, Status status, Type type, Ping ping) {
+    private static void sendNotification(Context context, String notificationMessage){
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
         notificationChannel.setDescription("network change notification");
@@ -81,26 +88,9 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID);
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle("Your network status");
-        if (status.equals(Status.CONNECTED)) {
-            if(ping.equals(Ping.Successful)){
-                if (type.equals(Type.Mobile)){
-                    builder.setContentText("Connected to Mobile and ping to google successful");
-                }
-                else if (type.equals(Type.Wifi)){
-                    builder.setContentText("Connected to Wifi and ping to google successful");
-                }
-            } else {
-                if (type.equals(Type.Mobile)){
-                    builder.setContentText("Connected to Mobile but ping to google unsuccessful");
-                }
-                else if (type.equals(Type.Wifi)){
-                    builder.setContentText("Connected to Wifi and ping to google unsuccessful");
-                }
-            }
-        } else {
-            builder.setContentText("Disconnected");
-        }
+        builder.setContentText(notificationMessage);
         notificationManager.notify(1, builder.build());
+        Toast.makeText(context, notificationMessage, Toast.LENGTH_LONG).show();
     }
 
     public static boolean isConnected(Context context) {
@@ -163,4 +153,35 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         return isWifiConn;
     }
 
+//    @RequiresApi(api = Build.VERSION_CODES.O)
+//    private static void createNotification(Context context, Status status, Type type, Ping ping) {
+//        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+//        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
+//        notificationChannel.setDescription("network change notification");
+//        notificationChannel.enableVibration(true);
+//        notificationManager.createNotificationChannel(notificationChannel);
+//        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID);
+//        builder.setSmallIcon(R.mipmap.ic_launcher);
+//        builder.setContentTitle("Your network status");
+//        if (status.equals(Status.CONNECTED)) {
+//            if(ping.equals(Ping.Successful)){
+//                if (type.equals(Type.Mobile)){
+//                    builder.setContentText("Connected to Mobile and ping to google successful");
+//                }
+//                else if (type.equals(Type.Wifi)){
+//                    builder.setContentText("Connected to Wifi and ping to google successful");
+//                }
+//            } else {
+//                if (type.equals(Type.Mobile)){
+//                    builder.setContentText("Connected to Mobile but ping to google unsuccessful");
+//                }
+//                else if (type.equals(Type.Wifi)){
+//                    builder.setContentText("Connected to Wifi and ping to google unsuccessful");
+//                }
+//            }
+//        } else {
+//            builder.setContentText("Disconnected");
+//        }
+//        notificationManager.notify(1, builder.build());
+//    }
 }
