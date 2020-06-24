@@ -2,22 +2,22 @@ package com.example.alvinaong.android_network;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.util.Log;
 import android.widget.Toast;
 
-import androidx.annotation.RequiresApi;
-import androidx.core.app.NotificationCompat;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
 
 public class ConnectivityStatusReceiver extends BroadcastReceiver {
 
@@ -25,20 +25,10 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
     static final String INTENT_ACTION = ConnectivityManager.CONNECTIVITY_ACTION;
     static final String CHANNEL_ID = "network";
 
-    enum Status {
-        CONNECTED,
-        DISCONNECTED
-    }
-
-    enum Type {
+    enum ConnectionType {
         None,
         Wifi,
         Mobile
-    }
-
-    enum Ping {
-        Successful,
-        Unsuccessful
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -46,40 +36,29 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String notificationMessage = "";
         Log.i(TAG, "onReceive");
-        if (!isConnected(context)) {
-//            Toast.makeText(context, "Disconnected", Toast.LENGTH_LONG).show();
-//            createNotification(context, Status.DISCONNECTED, Type.None, Ping.Unsuccessful);
-            notificationMessage = "Disconnected";
+
+        if (getTypeOfConnection(context) == ConnectionType.Mobile) {
+            notificationMessage = "Connected to mobile";
+        } else if (getTypeOfConnection(context) == ConnectionType.Wifi) {
+            notificationMessage = "Connected to wifi";
         } else {
-            if(isConnectedToThisServer()){
-                if (isMobileConnection(context)) {
-//                    Toast.makeText(context, "Connected to mobile and ping to google successful", Toast.LENGTH_LONG).show();
-//                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Successful);
-                    notificationMessage = "Connected to mobile and ping to google successful";
-                }
-                else if(isWifiConnection(context)){
-//                    Toast.makeText(context, "Connected to wifi and ping to google successful", Toast.LENGTH_LONG).show();
-//                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Successful);
-                    notificationMessage = "Connected to wifi and ping to google successful";
-                }
-            } else {
-                if (isMobileConnection(context)) {
-//                    Toast.makeText(context, "Connected to mobile but ping to google unsuccessful", Toast.LENGTH_LONG).show();
-//                    createNotification(context, Status.CONNECTED, Type.Mobile, Ping.Unsuccessful);
-                    notificationMessage = "Connected to mobile but ping to google unsuccessful";
-                }
-                else if(isWifiConnection(context)){
-//                    Toast.makeText(context, "Connected to wifi but ping to google unsuccessful", Toast.LENGTH_LONG).show();
-//                    createNotification(context, Status.CONNECTED, Type.Wifi, Ping.Unsuccessful);
-                    notificationMessage = "Connected to wifi but ping to google unsuccessful";
-                }
-            }
+            // ConnectionType.None
+            notificationMessage = "Disconnected";
         }
         sendNotification(context, notificationMessage);
     }
 
+    /**
+     * This method creates the notification and pushes it to the device's notification bar.
+     * @param context               the context of the application
+     * @param notificationMessage   the message to be displayed to the user in the notification
+     */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private static void sendNotification(Context context, String notificationMessage){
+    private void sendNotification(Context context, String notificationMessage){
+
+        Intent intent = new Intent(context, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
         notificationChannel.setDescription("network change notification");
@@ -89,21 +68,21 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle("Your network status");
         builder.setContentText(notificationMessage);
+        builder.setContentIntent(pendingIntent);
         notificationManager.notify(1, builder.build());
         Toast.makeText(context, notificationMessage, Toast.LENGTH_LONG).show();
     }
 
-    public static boolean isConnected(Context context) {
-        ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
-    }
-
-    public boolean isConnectedToThisServer() {
+    /**
+     * This method tells user if the device has live connection.
+     * @return  true if the user is really connected to the internet or false if there is no
+     *          live connection.
+     */
+    private static boolean isConnectedToThisServer() {
         Runtime runtime = Runtime.getRuntime();
         try {
             Process ipProcess = runtime.exec("/system/bin/ping -c 1 8.8.8.8");
-            int     exitValue = ipProcess.waitFor();
+            int exitValue = ipProcess.waitFor();
             Log.i(TAG, "exit value " + exitValue);
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -112,76 +91,45 @@ public class ConnectivityStatusReceiver extends BroadcastReceiver {
             String temp;
             int count = 0;
             String str = "";
-            while ( (temp = reader.readLine()) != null)//.read(buffer)) > 0)
-            {
+            while ((temp = reader.readLine()) != null) {
                 output.append(temp);
                 count++;
             }
             reader.close();
-            if(count > 0)
+            if (count > 0) {
                 str = output.toString();
+            }
             Log.i(TAG, str);
             return (exitValue == 0);
-        } catch (IOException e)          { e.printStackTrace(); }
-        catch (InterruptedException e) { e.printStackTrace(); }
-        catch (Exception e) {e.printStackTrace(); }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
+    /**
+     * This method tells user what type of connection the device has.
+     * @param context   the context of the application
+     * @return          ConnectionType.Wifi if connection is live and is connected to the Wifi or
+     *                  ConnectionType.Mobile if connection is live and is connected to the mobile data or
+     *                  ConnectionType.None if the device does not have live connection.
+     */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static boolean isMobileConnection(Context context){
-        boolean isMobileConn = false;
+    public static ConnectionType getTypeOfConnection(Context context){
         ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        for (Network network : connMgr.getAllNetworks()) {
+        if (networkInfo != null && networkInfo.isConnected() && isConnectedToThisServer()) {
+            if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                return ConnectionType.Wifi;
+            }
             if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
-                isMobileConn |= networkInfo.isConnected();
+                return ConnectionType.Mobile;
             }
         }
-        return isMobileConn;
+        return ConnectionType.None;
     }
-
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public static boolean isWifiConnection(Context context){
-        boolean isWifiConn = false;
-        ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        for (Network network : connMgr.getAllNetworks())
-            if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-                isWifiConn |= networkInfo.isConnected();
-            }
-        return isWifiConn;
-    }
-
-//    @RequiresApi(api = Build.VERSION_CODES.O)
-//    private static void createNotification(Context context, Status status, Type type, Ping ping) {
-//        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-//        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_DEFAULT);
-//        notificationChannel.setDescription("network change notification");
-//        notificationChannel.enableVibration(true);
-//        notificationManager.createNotificationChannel(notificationChannel);
-//        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID);
-//        builder.setSmallIcon(R.mipmap.ic_launcher);
-//        builder.setContentTitle("Your network status");
-//        if (status.equals(Status.CONNECTED)) {
-//            if(ping.equals(Ping.Successful)){
-//                if (type.equals(Type.Mobile)){
-//                    builder.setContentText("Connected to Mobile and ping to google successful");
-//                }
-//                else if (type.equals(Type.Wifi)){
-//                    builder.setContentText("Connected to Wifi and ping to google successful");
-//                }
-//            } else {
-//                if (type.equals(Type.Mobile)){
-//                    builder.setContentText("Connected to Mobile but ping to google unsuccessful");
-//                }
-//                else if (type.equals(Type.Wifi)){
-//                    builder.setContentText("Connected to Wifi and ping to google unsuccessful");
-//                }
-//            }
-//        } else {
-//            builder.setContentText("Disconnected");
-//        }
-//        notificationManager.notify(1, builder.build());
-//    }
 }

@@ -34,7 +34,6 @@ public class MyService extends Service {
     public void onCreate() {
         super.onCreate();
         mcsr = new ConnectivityStatusReceiver();
-
         Log.i(TAG, "service started and running");
     }
 
