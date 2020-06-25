@@ -43,10 +43,11 @@ public class MainActivity extends AppCompatActivity {
                     });
             alertDialog.show();
         } else if (type == ConnectivityStatusReceiver.ConnectionType.Mobile) {
-            tv.setText("Connected to mobile data");
+            tv.setText("Connected to " + ConnectivityStatusReceiver.ConnectionType.Mobile + " ("
+                    + ConnectivityStatusReceiver.getNetworkClass(this) + ")");
         } else {
             // ConnectionType.Wifi
-            tv.setText("Connected to wifi");
+            tv.setText("Connected to " + ConnectivityStatusReceiver.ConnectionType.Wifi);
         }
     }
 

@@ -45,7 +45,7 @@ public class MyService extends Service {
         registerReceiver(mcsr, intentFilter);
 
         NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_HIGH);
+        NotificationChannel notificationChannel = new NotificationChannel(CHANNEL_ID, "network notification", NotificationManager.IMPORTANCE_MIN);
         notificationChannel.setDescription("network change notification");
         notificationChannel.enableVibration(true);
         notificationManager.createNotificationChannel(notificationChannel);
